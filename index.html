@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Typeforge — Forge your typing speed</title>
+<meta name="description" content="A fast, minimal typing test. Track WPM, accuracy, and raw speed in real time.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.live-dashboard { padding: 90px 24px; }
+.live-dashboard .section-head { max-width: 760px; margin: 0 auto 34px; }
+.live-dashboard-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.dashboard-card { padding: 24px; border: 1px solid rgba(255,255,255,.08); border-radius: 16px; background: rgba(255,255,255,.025); }
+.dashboard-card-wide { grid-column: 1 / -1; }
+.dashboard-value { display: block; margin: 8px 0 4px; font-size: clamp(32px, 5vw, 52px); font-weight: 800; letter-spacing: -0.04em; }
+.dashboard-card-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.recent-tests { display: grid; gap: 8px; }
+.recent-test { display: grid; grid-template-columns: 1fr auto auto auto; gap: 18px; align-items: center; padding: 13px 0; border-top: 1px solid rgba(255,255,255,.07); }
+.recent-test:first-child { border-top: 0; padding-top: 0; }
+.recent-test-time, .recent-test-meta { color: var(--muted, #8b93a5); font-size: 13px; }
+.recent-test-wpm { font-weight: 700; }
+.recent-test-acc { font-family: "JetBrains Mono", monospace; }
+.recent-empty { color: var(--muted, #8b93a5); padding: 12px 0; }
+@media (max-width: 700px) {
+  .live-dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-card-wide { grid-column: auto; }
+  .recent-test { grid-template-columns: 1fr auto; gap: 7px 12px; }
+  .recent-test-meta { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- ================= NAV ================= -->
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="brand" data-route="landing">
+      <span class="brand-mark">⌁</span>
+      <span class="brand-name">typeforge</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#" data-route="test" class="nav-link">test</a>
+      <a href="#" data-route="landing" class="nav-link" data-scroll="features">features</a>
+      <a href="#" data-route="landing" class="nav-link" data-scroll="about-preview">about</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="btn btn-primary btn-sm" data-route="test">start typing</button>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+
+<!-- ================= LANDING ================= -->
+<section class="view" id="view-landing" data-view="landing">
+
+  <section class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <p class="eyebrow">real-time speed &amp; accuracy engine</p>
+      <h1 class="hero-title">
+        Type like you<br>mean it.
+      </h1>
+      <p class="hero-sub">No sign-up required. Pick a mode, press any key, and watch your words per minute climb in real time.</p>
+
+      <!-- SIGNATURE ELEMENT: live typing demo, the product demonstrating itself -->
+      <div class="hero-demo" id="hero-demo" aria-hidden="true">
+        <div class="hero-demo-bar">
+          <div class="hero-demo-dots"><span></span><span></span><span></span></div>
+          <div class="hero-demo-stat"><span id="hero-wpm">0</span> wpm</div>
+        </div>
+        <p class="hero-demo-text" id="hero-demo-text"></p>
+      </div>
+
+      <div class="hero-cta">
+        <button class="btn btn-primary btn-lg" data-route="test">
+          Start a test
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <span class="hero-cta-hint">or press <kbd>Enter</kbd></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-strip" id="dashboard">
+  <div class="stats-strip-inner">
+
+    <div class="stat">
+      <span class="stat-num" id="dashboard-tests">0</span>
+      <span class="stat-label">tests completed</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-num" id="dashboard-accuracy">100%</span>
+      <span class="stat-label">average accuracy</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-num" id="dashboard-wpm">0</span>
+      <span class="stat-label">current WPM</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-num" id="dashboard-best">0</span>
+      <span class="stat-label">best WPM</span>
+    </div>
+
+  </div>
+</section>
+
+  <section class="live-dashboard" id="live-dashboard">
+    <div class="section-head">
+      <p class="eyebrow">your performance</p>
+      <h2>Live typing records</h2>
+      <p class="hero-sub">Your results are updated automatically after every completed test and saved in this browser.</p>
+    </div>
+    <div class="live-dashboard-grid">
+      <div class="dashboard-card">
+        <span class="result-label">average WPM</span>
+        <span class="dashboard-value" id="dashboard-average-wpm">0</span>
+        <span class="result-sub">across completed tests</span>
+      </div>
+      <div class="dashboard-card">
+        <span class="result-label">latest accuracy</span>
+        <span class="dashboard-value" id="dashboard-latest-accuracy">100%</span>
+        <span class="result-sub">from your latest test</span>
+      </div>
+      <div class="dashboard-card dashboard-card-wide">
+        <div class="dashboard-card-head">
+          <span class="result-label">recent tests</span>
+          <button class="btn btn-ghost btn-sm" id="clear-history-btn" type="button">clear history</button>
+        </div>
+        <div class="recent-tests" id="recent-tests">
+          <div class="recent-empty">Complete a test to see your records here.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="section-head">
+      <p class="eyebrow">under the hood</p>
+      <h2>Built for the details that actually change your score</h2>
+    </div>
+    <div class="feature-grid">
+      <article class="feature-card">
+        <div class="feature-icon" style="--c: var(--accent)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+        </div>
+        <h3>Live WPM &amp; raw WPM</h3>
+        <p>Watch net and raw speed update on every keystroke, not just at the end of the test.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon" style="--c: var(--accent-2)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <h3>Character-level accuracy</h3>
+        <p>Correct, incorrect, missed, and extra characters are tracked separately so mistakes are never hidden in an average.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon" style="--c: #F59E0B">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <h3>Five test lengths</h3>
+        <p>15, 30, 60, 120 seconds, or set a custom duration. Word-count and quote modes included.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon" style="--c: #F87171">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+        </div>
+        <h3>Post-test breakdown</h3>
+        <p>A speed graph, mistake list, and shareable result card as soon as the timer ends.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="about-preview" id="about-preview">
+    <div class="about-preview-inner">
+      <p class="eyebrow">why typeforge</p>
+      <h2>Minimal by design, precise by default</h2>
+      <p class="about-preview-text">Typeforge strips out everything between you and the words on screen — no ads, no accounts to start, no artificial delays. It's the same engine whether you're warming up for ten seconds or chasing a personal best over two minutes.</p>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="brand footer-brand"><span class="brand-mark">⌁</span><span class="brand-name">typeforge</span></div>
+      <p class="footer-note">Built with HTML, CSS, and vanilla JavaScript. No frameworks.</p>
+    </div>
+  </footer>
+
+</section>
+
+<!-- ================= TYPING TEST ================= -->
+<section class="view" id="view-test" data-view="test" hidden>
+  <div class="test-shell">
+
+    <div class="test-controls" id="test-controls">
+      <div class="control-group" role="group" aria-label="Test mode">
+        <button class="chip active" data-mode="time">time</button>
+        <button class="chip" data-mode="words">words</button>
+        <button class="chip" data-mode="quote">quote</button>
+      </div>
+      <div class="control-sep" aria-hidden="true"></div>
+      <div class="control-group" id="mode-options" role="group" aria-label="Duration"></div>
+      <div class="control-sep" aria-hidden="true"></div>
+      <div class="control-group" role="group" aria-label="Text options">
+        <button class="chip chip-toggle" id="opt-punctuation" aria-pressed="false">punctuation</button>
+        <button class="chip chip-toggle" id="opt-numbers" aria-pressed="false">numbers</button>
+      </div>
+    </div>
+
+    <div class="test-readout" id="test-readout">
+      <div class="readout-item"><span class="readout-val" id="live-timer">15</span><span class="readout-label">sec</span></div>
+      <div class="readout-item"><span class="readout-val" id="live-wpm">0</span><span class="readout-label">wpm</span></div>
+      <div class="readout-item"><span class="readout-val" id="live-acc">100%</span><span class="readout-label">accuracy</span></div>
+    </div>
+
+    <div class="type-area" id="type-area" tabindex="0" aria-label="Typing test area. Start typing to begin.">
+      <div class="type-focus-hint" id="focus-hint">click here or press any key to focus</div>
+      <p class="type-text" id="type-text"></p>
+      <textarea id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-hidden="true"></textarea>
+    </div>
+
+    <div class="test-footer">
+      <button class="btn btn-ghost" id="restart-btn" title="Restart (Tab)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+        restart
+      </button>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section class="view" id="view-results" data-view="results" hidden>
+  <div class="results-shell">
+    <p class="eyebrow">test complete</p>
+    <h1 class="results-title">Here's how it went</h1>
+
+    <div class="results-grid">
+      <div class="result-card result-card-lg">
+        <span class="result-label">wpm</span>
+        <span class="result-val" id="res-wpm">0</span>
+        <span class="result-sub" id="res-wpm-best">best: —</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">accuracy</span>
+        <span class="result-val" id="res-acc">0%</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">raw wpm</span>
+        <span class="result-val" id="res-raw">0</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">characters</span>
+        <span class="result-val result-val-sm" id="res-chars">0/0/0/0</span>
+        <span class="result-sub">correct / incorrect / missed / extra</span>
+      </div>
+      <div class="result-card">
+        <span class="result-label">time</span>
+        <span class="result-val" id="res-time">0s</span>
+      </div>
+    </div>
+
+    <div class="result-graph-card">
+      <div class="result-graph-head">
+        <span class="result-label">speed over time</span>
+      </div>
+      <svg id="result-graph" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn btn-primary btn-lg" id="retry-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+        try again
+      </button>
+      <button class="btn btn-ghost btn-lg" id="share-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/></svg>
+        copy result
+      </button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="Script.js"></script>
+</body>
+</html>
